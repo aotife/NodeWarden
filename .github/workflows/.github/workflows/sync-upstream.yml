@@ -1,0 +1,38 @@
+name: Sync upstream auto
+# 单独授予修改workflow、代码推送权限，不受全局权限限制
+permissions:
+  contents: write
+  workflows: write
+on:
+  # 定时：每天北京时间16点自动同步（UTC 8点）
+  schedule:
+    - cron: '0 8 * * *'
+  # 支持网页手动一键触发
+  workflow_dispatch:
+
+jobs:
+  sync-fork:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 当前仓库完整代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: 配置Git提交用户
+        run: |
+          git config --global user.name "Auto Sync Bot"
+          git config --global user.email "sync-bot@github.com"
+
+      - name: 绑定上游原仓库
+        run: git remote add upstream https://github.com/shuaiplus/nodewarden.git
+
+      - name: 拉取上游main分支全部提交
+        run: git fetch upstream main
+
+      - name: 合并上游更新（冲突仅终止任务，不会删除你的同步脚本）
+        run: git merge upstream/main --allow-unrelated-histories || true
+
+      - name: 推送合并后的代码到你的仓库
+        run: git push origin main
